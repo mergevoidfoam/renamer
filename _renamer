@@ -1,0 +1,68 @@
+#compdef renamer
+# zsh completion for renamer.
+# -s lets short options stack (-fmyv); -S makes "--" end the options.
+# The parenthesised lists name options that can't follow this one, so only options that can
+# still be combined are offered. PATH is optional (no PATH means the current folder).
+
+# renamer meta ...: the tags mode has its own options.
+if (( CURRENT > 2 )) && [[ $words[2] == meta ]]; then
+  shift words
+  (( CURRENT-- ))
+  _arguments -s -S \
+    '(- *)'{-h,--help}'[show the META help and exit]' \
+    '(--view -u --undo -r --reset)--view[list the tags already in the videos; changes nothing]' \
+    '(--compare -u --undo -r --reset)--compare[list each tag beside what TVmaze has; changes nothing]' \
+    '(-s --show -u --undo -r --reset)'{-s+,--show=}'[use this show name and skip the show-name question]:show name: ' \
+    '(-n --names -u --undo -r --reset)'{-n+,--names=}'[take the titles from a nameInfo file (offline)]:nameInfo file:_files' \
+    '(-v --verbose)'{-v,--verbose}'[show every old and new tag and save the output to ~/.logs/]' \
+    '(-u --undo -r --reset -s --show -n --names --view --compare)'{-u,--undo}'[reverse the most recent run]' \
+    '(-r --reset -u --undo -s --show -n --names --view --compare)'{-r,--reset}'[reverse the most recent run completely]' \
+    '(--no-pager)--no-pager[print a long preview to the terminal instead of less]' \
+    '1::video file, season folder or show folder:_files'
+  return
+fi
+
+# "meta" only counts as the very first word; after an option the word is a folder.
+local path_spec='1::show or season folder:_files -/'
+(( CURRENT == 2 )) && path_spec='1::show or season folder, or a mode:{_alternative "modes:mode:((meta\:check\ and\ fix\ only\ the\ tags\ inside\ the\ videos lib\:work\ on\ a\ whole\ library\ folder))" "folders:show or season folder:_files -/"}'
+
+# renamer lib ...: work on a whole library folder.
+if (( CURRENT > 2 )) && [[ $words[2] == lib ]]; then
+  shift words
+  (( CURRENT-- ))
+  _arguments -s -S \
+    '(- *)'{-h,--help}'[show the LIBRARY help and exit]' \
+    '(-s --sort -g --genre -G --group -u --undo -r --reset)'{-s,--sort}'[gather each show into one folder, sort its seasons, move movies out]' \
+    '(-G --group -s --sort -g --genre -c --clean -u --undo -r --reset)'{-G,--group}'[put each show'"'"'s copies in one folder, every release left whole]' \
+    '(-g --genre -s --sort -G --group -c --clean -u --undo -r --reset)'{-g,--genre}'[move each show or movie into a genre folder]' \
+    '(-c --clean -g --genre -G --group -u --undo -r --reset)'{-c,--clean}'[with --sort, also move junk to .junk/ and remove emptied folders]' \
+    '(-v --verbose)'{-v,--verbose}'[explain every decision and save the output to ~/.logs/]' \
+    '(-u --undo -r --reset -g --genre -G --group -s --sort -c --clean)'{-u,--undo}'[reverse the most recent lib run]' \
+    '(-r --reset -u --undo -g --genre -G --group -s --sort -c --clean)'{-r,--reset}'[reverse the most recent lib run completely]' \
+    '(--no-pager)--no-pager[print a long preview to the terminal instead of less]' \
+    '1::library folder:_files -/'
+  return
+fi
+
+local -a rename_opts=(-a --all -s --show -n --names -g --make-names -f --fix-folders -y --years -m --nfo -t --meta -c --clean --renumber)
+local -a not_with_sort=(-a --all -s --show -n --names -g --make-names -f --fix-folders -y --years -m --nfo -t --meta --renumber -u --undo -r --reset)
+
+_arguments -s -S \
+  '(- *)'{-h,--help}'[show the help, one section per kind of work, and exit]' \
+  '(-s --show -o --sort -u --undo -r --reset)'{-s+,--show=}'[use this show name and skip the show-name question]:show name: ' \
+  '(-n --names -g --make-names --renumber -o --sort -u --undo -r --reset)'{-n+,--names=}'[take the titles from a nameInfo file instead of TVmaze (offline)]:nameInfo file:_files' \
+  '(-g --make-names -a --all -n --names -f --fix-folders -y --years -m --nfo -t --meta -c --clean --renumber -o --sort -u --undo -r --reset)'{-g+,--make-names=}'[write TVmaze titles to a nameInfo file; renames nothing]:new nameInfo file:_files' \
+  '(-f --fix-folders -a --all -g --make-names -o --sort -u --undo -r --reset)'{-f,--fix-folders}'[also rename the show folder and the season folders]' \
+  '(-y --years -a --all -g --make-names -o --sort -u --undo -r --reset)'{-y,--years}'[put the show years in the show folder name (needs --fix-folders)]' \
+  '(-m --nfo -a --all -g --make-names -o --sort -u --undo -r --reset)'{-m,--nfo}'[also write Kodi .nfo files into .nfo/]' \
+  '(-t --meta --all -g --make-names -o --sort -u --undo -r --reset)'{-t,--meta}'[rename as usual and also fix the tags inside the videos]' \
+  '(-c --clean -a --all -g --make-names -u --undo -r --reset)'{-c,--clean}'[also move junk to .junk/; on its own, clean only]' \
+  '(--renumber -n --names -g --make-names -o --sort -u --undo -r --reset)--renumber[use TVmaze episode numbers when a title belongs to another number]' \
+  "(-o --sort $not_with_sort)"{-o,--sort}'[sort mode: move the videos into Season_NN folders; renames nothing]' \
+  '(-a --all -v --verbose -c --clean -y --years -f --fix-folders -m --nfo -o --sort -g --make-names -u --undo -r --reset)-a[full run without tags: --verbose --clean --years --fix-folders --nfo]' \
+  '(-a --all -v --verbose -c --clean -y --years -f --fix-folders -m --nfo -t --meta -o --sort -g --make-names -u --undo -r --reset)--all[full run with tags: everything -a does, plus --meta]' \
+  '(-v --verbose -a --all)'{-v,--verbose}'[explain every decision and save the output to ~/.logs/]' \
+  "(-u --undo -r --reset -o --sort $rename_opts)"{-u,--undo}'[reverse the most recent run; old .nfo files stay in .nfo/.nfo-old]' \
+  "(-r --reset -u --undo -o --sort $rename_opts)"{-r,--reset}'[reverse the most recent run completely]' \
+  '(--no-pager)--no-pager[print a long preview to the terminal instead of less]' \
+  "$path_spec"

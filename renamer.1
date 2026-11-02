@@ -1,0 +1,854 @@
+.\" Man page for renamer. View it with:  man ./renamer.1
+.TH RENAMER 1 "2026-10-31" "renamer 1.2.0" "User Commands"
+.SH NAME
+renamer \- rename TV episode files and fix the tags inside them
+.SH SYNOPSIS
+.B renamer
+.RI [ options ]
+.RI [ PATH ]
+.br
+.B renamer meta
+.RI [ options ]
+.RI [ PATH ]
+.br
+.B renamer \-\-sort
+.RB [ \-\-clean ]
+.RB [ \-\-verbose ]
+.RI [ PATH ]
+.br
+.B renamer \-\-clean
+.RI [ PATH ]
+.br
+.B renamer \-\-make\-names
+.I FILE
+.RI [ PATH ]
+.br
+.B renamer \-\-undo
+|
+.B \-\-reset
+.RI [ PATH ]
+.br
+.B renamer lib \-\-sort
+|
+.B \-\-group
+|
+.B \-\-genre
+.RI [ LIBRARY ]
+.SH DESCRIPTION
+.B renamer
+renames the episode files of a TV show to
+.BR Show\-Name_S01E04_Episode\-Title.mkv ,
+with the episode titles from TVmaze, and can also rename the show and season folders, write
+Kodi
+.I .nfo
+files, move junk out of the way, sort loose videos into season folders, and check and fix the
+tags inside the videos (title, show, season, episode, plot and so on) for players such as VLC,
+mpv, Jellyfin and Plex.
+.PP
+Every run first works out everything it would do and shows it as a
+.BR preview ,
+then asks one question.
+.B Nothing is changed until you answer y.
+Every change is written to an undo log as it is made, so
+.B renamer \-\-undo
+can reverse the run afterwards.
+.PP
+.I PATH
+is a show folder (every season folder in it is handled) or one season folder (its parent is
+taken as the show folder). A season folder that sits directly in a TV library, with other shows
+next to it, is its own show folder: its undo log,
+.I .nfo/
+and
+.I .junk/
+stay inside it.
+.B renamer meta
+also takes a single video file.
+.I .
+is the current folder, and so is no
+.I PATH
+when other options are given:
+.B renamer \-\-meta
+inside a show folder handles that show.
+.B renamer
+on its own, or
+.B renamer meta
+on its own, prints a short summary of the options and changes nothing.
+.PP
+Renaming is the plain
+.B renamer
+command. Other kinds of work have their own word after it, like
+.BR "renamer meta" ;
+a folder that is really called
+.I meta
+is given as
+.IR ./meta .
+.TP
+.BR \-\-help ", " \-h
+Show the help: one section per kind of work, as below.
+.B renamer meta \-\-help
+shows only the META section. A long help opens in
+.BR less .
+.SH RENAMING
+.B renamer
+.RI [ options ]
+.RI [ PATH ]
+.PP
+Renames each video, and the subtitles that go with it
+.RI ( Show.S01E04.en.srt ,
+the files in a season's
+.I Subs
+folder), to
+.BR Show\-Name_S01E04_Episode\-Title.ext .
+A file holding two episodes becomes
+.BR Show\-Name_S01E01E02_Title\-1+Title\-2.mkv .
+The season and episode come from the
+.B SxxEyy
+or
+.B 1x04
+in the filename, or from the season folder's name and the order of the files.
+.PP
+.B Changes:
+file names. Folder names,
+.I .nfo
+files, junk and the tags inside the videos only with the options below. Videos are never
+deleted; junk only when you answer
+.BR DELETE .
+.TP
+.BI \-\-show " NAME" "\fR, \fP\-s " NAME
+Use this show name and skip the show-name question.
+.TP
+.BI \-\-names " FILE" "\fR, \fP\-n " FILE
+Take the titles from a nameInfo file instead of TVmaze. The run is then offline. See
+.BR "NAMES FILE" .
+.TP
+.BR \-\-fix\-folders ", " \-f
+Also rename the show folder
+.RI ( Show\-Name_Seasons_01\-08 )
+and the season folders
+.RI ( Season_01_Show\-Name ,
+the number first so a file browser shows it however long the name). A season the show calls
+something else keeps that:
+.I Book One \- Air
+becomes
+.IR Book_01_Air_Show\-Name ;
+Volume, Chapter and Series work the same way.
+.TP
+.BR \-\-years ", " \-y
+Put the show's years in the show folder name
+.RI ( Show\-Name_2013\-present_Seasons_01\-08 ).
+Season folders never get a year.
+Needs
+.BR \-\-fix\-folders .
+.TP
+.BR \-\-nfo ", " \-m
+Also write Kodi
+.I .nfo
+files (one per episode and a
+.IR tvshow.nfo )
+into the hidden
+.I .nfo/
+folder.
+.TP
+.BR \-\-meta ", " \-t
+Rename as usual,
+.B and also
+check and fix the tags inside the videos, as
+.B renamer meta
+does. The tags are written to the files' new names after the renames. For tags only, without
+renaming, use
+.BR "renamer meta" .
+.TP
+.BR \-\-clean ", " \-c
+Also move junk (samples,
+.IR .txt ,
+.IR .url ,
+.IR .sfv ,
+screenshots, programs) to the hidden
+.I .junk/
+folder, keeping its path. The final question becomes
+.BR [y/n/DELETE] ;
+typing
+.B DELETE
+in capitals deletes the junk instead. On its own, with no renaming options,
+.B \-\-clean
+only cleans; see
+.BR "CLEAN ONLY" .
+.TP
+.B \-\-renumber
+When a filename's title matches TVmaze's title for a different episode number, use TVmaze's
+number. Without it, such files keep their number and are flagged.
+.TP
+.B \-a
+The usual full run without tags: the same as
+.BR "\-\-verbose \-\-clean \-\-years \-\-fix\-folders \-\-nfo" .
+.TP
+.B \-\-all
+The usual full run with tags: everything
+.B \-a
+does, plus
+.BR \-\-meta .
+.TP
+.BR \-\-verbose ", " \-v
+Explain every decision (where each season, episode, title and show name came from, every
+request to TVmaze) and save the output to a log file in
+.IR ~/.logs/ .
+.TP
+.B \-\-no\-pager
+Print a long preview straight to the terminal instead of opening it in
+.BR less .
+.SS Plain episode numbers and overall numbering
+Files with only a number
+.RI ( "Show \- 12" ", " Episode01.mp4 ", " "Episode 10 Doubt" ", " "[18] Title" )
+are compared with TVmaze's list. The number counts the season when it fits the season, and the whole
+show when it runs past the season's end or nothing says which season it is. The preview notes
+.B overall episode N
+when that changes the number. A number past the end of the list is left alone, as
+.BR UNMATCHED .
+.PP
+Shows TVmaze lists by calendar year, such as Example Show, keep their overall number, as wide as the
+show's total, in Wikipedia's seasons:
+.IR Example\-Show_S16E0623_Title.mkv .
+.PP
+.B S02E13
+in a 12\-episode season counts on from season 1, so it's S02E01. A release that splits its seasons
+differently from TVmaze but adds up to the same total is counted through, and shown as
+.BR RENUMBERED .
+.SS Season folder names
+With
+.BR \-\-fix\-folders ,
+a season with a name of its own from TVmaze or Wikipedia takes it:
+.IR Season_16_Season\-Name .
+Otherwise it's
+.IR Season_01_Show\-Name .
+A folder with
+.B Dub
+or
+.B English Dub
+in its name, or most of its files, gets
+.B _Dub
+at the end of the show folder name.
+.SS How the show name is found
+With
+.BR \-\-show ,
+that name is used. Otherwise the show folder's name is cleaned (anything from a year, a
+.BR ( ,
+a season code or a release tag such as
+.B 1080p
+on is dropped) and searched for on TVmaze, and TVmaze's own name for the show goes into the
+filenames.
+.PP
+When the filenames name a different show than the folder does (a show kept in a folder called
+.IR Scifi ,
+with files called
+.IR Example.Show\-s01e01.mkv ),
+renamer asks which to search for, with the filenames' name first:
+.PP
+.nf
+.RS
+The folder and the files name different shows:
+  1) Example Show  (from 173 filenames)
+  2) Scifi          (the show folder name)
+Search TVmaze for [1], or type a name:
+.RE
+.fi
+.PP
+When TVmaze has several shows of the same name, renamer picks by the year in the folder or file names,
+then the episode titles, then the episode numbers. When TVmaze still has several matching shows,
+renamer lists them with their years. Type the number
+of the right one,
+.B 0
+or another name to search again, or press Enter for the first. When TVmaze has none, renamer
+offers Wikipedia's suggestion for the name, then asks you to type one.
+.SH META (TAGS ONLY)
+.B renamer meta
+.RI [ options ]
+.RI [ PATH ]
+.PP
+Reads the tags inside the videos with
+.B ffprobe
+(and
+.B mkvmerge
+for MKV), compares them with TVmaze, and fixes them: title, show, season, episode, air date,
+plot, genre, network, rating, IMDb/TVDB/TVmaze IDs, the language of audio and subtitle tracks
+that have none, and a single default audio track. Other tags in the file are kept. A value
+TVmaze doesn't have is left as it is, never removed.
+.PP
+MKV files are changed in place with
+.BR mkvpropedit ,
+in seconds. MP4 and AVI files are copied by
+.B ffmpeg
+with the new tags (no re-encoding); the copy is checked (same streams, same length) before it
+replaces the original. AVI only holds a title, genre, date and comment.
+.PP
+.B Changes:
+only the tags inside the videos. Never renames or moves anything.
+.B \-\-view
+and
+.B \-\-compare
+change nothing at all.
+.TP
+.B \-\-view
+List the tags already in the videos, file by file, in a readable form: the standard tags, any
+other tags, and the audio and subtitle tracks with their language and default flag. Needs no
+internet, asks nothing, writes no undo log.
+.TP
+.B \-\-compare
+List each tag beside what TVmaze has, marked
+.BR same ,
+.B different
+(old \(-> TVmaze's value) or
+.BR missing ,
+and the track fixes renamer would make. Ends with how many videos match. Changes nothing.
+Implies
+.BR \-\-view .
+.TP
+.BI \-\-show " NAME" "\fR, \fP\-s " NAME
+Use this show name and skip the show-name question.
+.TP
+.BI \-\-names " FILE" "\fR, \fP\-n " FILE
+Take the titles from a nameInfo file instead of TVmaze (offline). Only the title, show,
+season and episode tags are then set.
+.TP
+.BR \-\-verbose ", " \-v
+Show every tag's old and new value and save the output to
+.IR ~/.logs/ .
+.TP
+.BR \-\-undo ", " \-u
+Reverse the most recent run (the same as
+.BR "renamer \-\-undo" ).
+.TP
+.BR \-\-reset ", " \-r
+Reverse the most recent run completely (the same as
+.BR "renamer \-\-reset" ).
+.TP
+.B \-\-no\-pager
+Print a long preview straight to the terminal.
+.SH SORT
+.B renamer \-\-sort
+.RB [ \-\-clean ]
+.RB [ \-\-verbose ]
+.RI [ PATH ]
+.PP
+Gathers a show's videos from loose files, release folders and wrongly named folders into
+.I Season_NN
+folders, with their subtitles. When there are several copies of one episode, the best one
+stays (higher resolution, then the bigger file) and the others go to the hidden
+.I .duplicates/
+folder. A video whose filename names another show goes to
+.I ../unsorted/
+next to the show folder. Run
+.B renamer
+again afterwards to rename the files.
+.PP
+.B Changes:
+where the files are. Renames nothing.
+.TP
+.BR \-\-sort ", " \-o
+Sort mode. Can only be combined with
+.B \-\-clean
+and
+.BR \-\-verbose .
+.TP
+.BR \-\-clean ", " \-c
+Also move junk to
+.I .junk/
+and remove the folders left empty.
+.SH CLEAN ONLY
+.B renamer \-\-clean
+.RI [ PATH ]
+.PP
+Only cleans: junk, samples and screenshots go to
+.IR .junk/ ,
+and folders left completely empty are removed. Always with the full
+.B \-\-verbose
+output and log.
+.PP
+.B Changes:
+moves junk to
+.I .junk/
+(or deletes it when you answer
+.BR DELETE )
+and removes empty folders. Renames nothing.
+.SH NAMES FILE
+.B renamer \-\-make\-names
+.I FILE
+.RI [ PATH ]
+.br
+.B renamer \-\-names
+.I FILE
+.RI [ PATH ]
+.PP
+For shows TVmaze numbers differently from your files, or to work offline. A nameInfo file has
+a line per season
+.RB ( S01 )
+followed by one title per video file, in order. Two episodes in one file are joined with
+.BR " + " .
+Lines starting with
+.B #
+are comments.
+.TP
+.BI \-\-make\-names " FILE" "\fR, \fP\-g " FILE
+Write TVmaze's titles for the show to
+.IR FILE ,
+to edit and use with
+.BR \-\-names .
+Renames nothing; refuses to overwrite an existing file.
+.TP
+.BI \-\-names " FILE" "\fR, \fP\-n " FILE
+Rename from that file, without going online. Missing titles are asked for.
+.SH UNDO AND RESET
+.B renamer \-\-undo
+.RI [ PATH ]
+.br
+.B renamer \-\-reset
+.RI [ PATH ]
+.PP
+Reverse the most recent run in the show folder, from its undo log, after the same preview and
+question: renames and folder renames go back, junk comes back out of
+.IR .junk/ ,
+the
+.I .nfo
+files the run created are deleted (unless you edited them since), and the tags inside the
+videos are put back. Each run can be reversed once; running it again steps back one more run.
+.TP
+.BR \-\-undo ", " \-u
+Old
+.I .nfo
+files the run archived stay in
+.IR .nfo/.nfo\-old/ .
+.TP
+.BR \-\-reset ", " \-r
+Everything goes back exactly as it was, old
+.I .nfo
+files included.
+.SH LIBRARY: GATHERING SHOWS
+.B renamer lib \-\-sort
+.RB [ \-\-clean ]
+.RI [ LIBRARY ]
+.PP
+Tidies a library folder whose shows are in pieces. Each piece is matched to its TVmaze show
+(by renamer's own ID in
+.I tvshow.nfo
+or MKV tags, else by name), and the pieces of one show gather in one show folder:
+.IP \(bu 2
+several folders of the same show
+.RI ( "Example Show" ,
+.IR Example\-Show_1997\-present_Seasons_01\-26 ,
+.IR "Example Show Season 27 and 28" );
+.IP \(bu 2
+lone season folders
+.RI ( "Example Show (2005) Season 1 S01" ", " "\[u2026] Season 2 S02" );
+.IP \(bu 2
+loose episode files at the top of the library
+.RI ( Example.Show.S29E01\[u2026]mkv );
+.IP \(bu 2
+season folders with no show name
+.RI ( "SEASON 02" ),
+matched by their episode titles against the library's other shows.
+.PP
+Shows are told apart by their TVmaze ID, never by name alone, so spin-offs
+.RI ( "Example Show: Spin-Off" )
+stay separate. The pieces go into the folder already inside a genre folder, else the one in
+renamer's own format, else the one with the most episodes; when there's no show folder yet, a
+new one named by TVmaze
+.RI ( Example\-Show/ ).
+Download sites' names
+.RI ( www.example-site.org \- )
+and extras like
+.I +Specials
+are left out of the show name.
+.PP
+A folder around the seasons with a generic name
+.RI ( Series/ ", " Seasons/ ", " Episodes/ ", " Shows/ ", " TV/ ", " "TV Series/" ", " Complete/ )
+is removed, its contents moved up into the show folder.
+.PP
+Movies found in the TV library go to a folder called
+.I Movies
+in
+.IR ../ ,
+.I ../../
+or
+.I ../../../
+(for an animated library,
+.I Movies(Animated)
+first), else to a hidden
+.I .movies/
+in the library. That includes movies beside a show's seasons: a folder or video with a year in
+its name and no episode numbers, unless a show has more than three of those, which are taken as
+its specials. A movies folder on another disk is a
+.BR CONFLICT .
+.PP
+Then, in a second preview and question, the episodes inside each show that got new pieces go
+into season folders, as
+.B renamer \-\-sort
+does. When an episode has several copies, the one whose name looks like the show's own files (the
+same release) is kept, else the best quality; the others go to
+.IR .duplicates/ .
+.PP
+Left alone, and listed: bundles of several shows (numbered parts:
+.IR "1a. Example Show \- Part One" ),
+any show with a download still in progress
+.RI ( .!qb ),
+and qBittorrent's hidden
+.I .parts
+files. Matches renamer isn't sure about are listed after the preview to change or leave. A
+read\-only library gets the preview only.
+.B renamer lib \-\-undo
+reverses the last step; run it twice for both.
+.TP
+.BR \-\-sort ", " \-s
+Gather each show's pieces into one show folder and sort its episodes into season folders.
+.TP
+.BR \-\-clean ", " \-c
+With
+.BR \-\-sort :
+also move junk to
+.I .junk/
+and remove the folders left empty.
+.PP
+A folder holding two shows of one name is split by the year in the names, episode titles and episode
+numbers:
+.IR "Example 1/2/" " becomes " Example\-½_1989/ " and " Example\-½_2024/ .
+What can't be told apart stays where it is. A dub stays apart from the show's other copies, in a
+.I _Dub
+folder. A folder of movies with years in their names moves to the movies library whole.
+.SH LIBRARY: KEEPING COPIES TOGETHER
+.B renamer lib \-\-group
+.RI [ LIBRARY ]
+.PP
+For a library holding several copies of a show, whole or partial, that you want to keep apart.
+Each show with two or more copies gets one folder, named by TVmaze with no years
+.RI ( Example\-Show/ ),
+and each release moves into it whole, under its own name. Nothing inside a release changes:
+nothing is merged, renamed or deleted, and movies and
+.I Series/
+folders stay where they are.
+.PP
+Loose episode files at the top of the library go in a
+.I loose\-episodes/
+folder inside the show's folder, with their subtitles. A copy that already has the new folder's
+name ends up inside it
+.RI ( Example-Show/Example-Show/ ).
+A show with one copy stays where it is, and shows are told apart by their TVmaze ID, so spin\-offs
+get folders of their own. Bundles of several shows, movies and any show still downloading
+.RI ( .!qb )
+are left alone. Matches renamer isn't sure about are listed after the preview to change or leave.
+.PP
+The folder holds a small hidden file,
+.IR .renamer\-group ,
+with the show's TVmaze ID. Because of it, a later
+.B \-\-group
+adds new copies to the folder,
+.B \-\-sort
+leaves it alone,
+.B \-\-genre
+moves it as one show, and plain
+.B renamer
+asks for one of the releases inside it.
+.PP
+.B Changes:
+only where whole releases and loose episodes are. A torrent still seeding from a release loses
+track of its files unless you move it in qBittorrent instead.
+.B renamer lib \-\-undo
+reverses the run.
+.TP
+.BR \-\-group ", " \-G
+Keep each show's copies together in one folder.
+.SH LIBRARY: GENRE FOLDERS
+.B renamer lib \-\-genre
+.RI [ LIBRARY ]
+.br
+.B renamer lib \-\-undo
+.RI [ LIBRARY ]
+.PP
+Works on a whole library folder, such as
+.IR TV/ ,
+.I TV (Animated)/
+or
+.IR Movies/ .
+Each show folder, movie folder or loose movie file at its top moves, as a whole, into a genre
+folder in the library:
+.I TV/Example Show/
+becomes
+.IR TV/Comedy/Example Show/ .
+Nothing inside it changes. Folders that already are genre folders (a genre's name, its folder
+name in the config, or an alias, so
+.I Scifi/
+counts as Science-Fiction), and everything already in them, stay where they are.
+.PP
+A folder with season folders or episode videos is a show: renamer finds it on TVmaze (by the
+TVmaze ID in renamer's own
+.I tvshow.nfo
+or MKV tags when there is one, else by name, with Wikipedia's suggestion when TVmaze finds
+nothing) and takes TVmaze's genres. Anything else with videos is a movie: renamer finds it on
+Wikidata by title and year (or through Wikipedia's search) and takes its genres. Either way, the
+first sentence of the Wikipedia article ("\[u2026]an American science fiction drama television
+series") decides which genre is the main one. When it names exactly one of the genres, or there
+is only one, renamer is sure; otherwise it guesses (the first one Wikipedia names, or the
+config's order) and marks the row
+.BR GUESS .
+.PP
+After the preview, the guesses are listed with their genres and why renamer isn't sure.
+Type their numbers (or
+.BR all )
+to change them: pick a folder from the list, type a folder name,
+.B 0
+to leave it where it is, or
+.B s
+to search TVmaze for a different show. Then the usual question.
+.PP
+.B Changes:
+only where the show and movie folders are, and new genre folders. A show still downloading
+.RI ( .!qb )
+or whose name is already in its genre folder is a
+.BR CONFLICT .
+A genre folder that holds a show's season folders directly (no show folder) is offered a show
+folder first:
+.IR Scifi/Example\-Show/ .
+.B renamer lib \-\-undo
+moves everything back and removes genre folders it made, if they're empty.
+.PP
+Lookups are cached for 30 days, so a second run is quick. TVmaze is asked at most 20 times in
+10 seconds, Wikipedia and Wikidata once a second.
+.TP
+.BR \-\-genre ", " \-g
+Sort into genre folders.
+.TP
+.BR \-\-verbose ", " \-v
+Explain every decision and save the output to
+.IR ~/.logs/ .
+.TP
+.BR \-\-undo ", " \-u
+Reverse the most recent lib run.
+.TP
+.BR \-\-reset ", " \-r
+Reverse the most recent lib run completely.
+.TP
+.B \-\-no\-pager
+Print a long preview straight to the terminal.
+.SH QUESTIONS RENAMER MAY ASK
+Some problems renamer can fix there and then, after a yes. In each case you still see the usual
+preview and question before anything changes.
+.TP
+.B Move them up into the show folder and remove Series/?
+The seasons are one folder further down, in a folder with a generic name, as in
+.IR Show.S01\-S13/Series/Season\ 1/ .
+Giving the release or its
+.I Series/
+folder does the same thing, and the show's name comes from the release. No stops the run with
+nothing changed.
+.TP
+.B Move it to /mnt/media/Movies/?
+A folder or video beside the seasons has a year in its name and no episode numbers, so it looks
+like a movie. It goes where
+.B renamer lib \-\-sort
+would put it; its featurettes go with it. No leaves it where it is, and it's listed as ignored.
+Moving the seasons up and moving movies out are one run in the undo log, and the rename is
+another.
+.TP
+.B Sort them into season folders first?
+Videos are in release folders inside the show folder, loose next to season folders, or the
+folder is one season sitting directly in the library. Yes runs
+.B renamer \-\-sort
+on it (with its own preview and question), then looks at the folder again and carries on with
+the rename. The sort and the rename are two runs in the undo log.
+.B renamer meta
+never moves files, so it only warns.
+.TP
+.B Use TVmaze's numbers for these?
+Filenames whose titles belong to another TVmaze episode number. Yes does what
+.B \-\-renumber
+does.
+.TP
+.B Write TVmaze's titles to a file, open it in your editor, and rename from it?
+TVmaze numbers the show differently from the files (it counts segments, or a season is longer
+or shorter). Yes writes the titles to
+.IR ~/.local/share/renamer/names/<Show>.txt ,
+opens it in
+.B $VISUAL
+or
+.B $EDITOR
+(or nano, or vi), and renames from it once you save and close it, as
+.B \-\-names
+would. The next run on the show offers the same file again, with your edits.
+.TP
+.B Try them again now?
+Files that were in use (playing over SMB) and skipped. Yes tries them again, in the same run.
+.SH THE PREVIEW
+Each file is listed with a status, the old name, and the new name on the line below. A long
+preview opens in
+.B less
+(or
+.BR $PAGER );
+press
+.B q
+and only the
+.B Needs a look
+list stays on screen, above the question. Runs of three or more files in a folder that are
+already correct are shown as one line
+.RI ( "SKIP  Season 3/ (16 videos)" );
+.B \-\-verbose
+lists each one. Tag changes show their values: the ones every file shares (show, genre,
+network, IDs) once, under
+.BR "Tags for every file" ,
+and each file's own (title, episode, air date, rating, plot) under it, with the old value when
+one changes.
+.TP
+.B OK
+will be renamed (or is fine).
+.TP
+.B SKIP
+already correct; nothing to do.
+.TP
+.B TAG
+its tags will be updated
+.RB ( "renamer meta" ", " \-\-meta ).
+.TP
+.B WARN
+will be changed, but something needs checking (a title that doesn't match TVmaze, a file
+changed in the last two minutes, tracks with no language).
+.TP
+.B CONFLICT
+can't be changed (the new name exists, two files claim the same episode, a tool is missing);
+left alone.
+.TP
+.BR UNMATCHED ", " LOOSE ", " IGNORED
+no season or episode found; a video loose in the show folder; a folder that isn't a season
+folder. All left alone.
+.TP
+.BR DUPLICATE ", " RENUMBERED ", " ARCHIVE ", " JUNK ", " CREATE
+another copy of an episode; given TVmaze's number
+.RB ( \-\-renumber );
+an old
+.I .nfo
+moving to
+.IR .nfo/.nfo\-old/ ;
+junk moving to
+.IR .junk/ ;
+a new
+.I .nfo
+file.
+.PP
+The question at the end counts what will happen, for example
+.BR "Rename 122 files, update the tags in 122 videos? [y/N]" .
+Enter, or anything but
+.BR y ,
+changes nothing. Ctrl\-C at the question also changes nothing.
+.SH SAFETY
+.IP \(bu 2
+Nothing is changed before you answer
+.BR y .
+An existing file is never overwritten; a video is never deleted.
+.IP \(bu 2
+An unfinished download
+.RI ( .!qb ", " .!ut )
+anywhere in the show stops the run before anything else.
+.IP \(bu 2
+A file that is in use (playing over SMB) is asked about: retry, skip it, or stop.
+.IP \(bu 2
+Each change is written to the undo log as it is made, so a run stopped halfway can still be
+undone.
+.IP \(bu 2
+Run renamer as your normal user, not with sudo, so its files aren't owned by root.
+.SH EXAMPLES
+.TP
+.B renamer \-\-all "/mnt/media/TV/Example Show"
+First run on a new show: names, folders with years,
+.I .nfo
+files, junk and tags.
+.TP
+.B renamer .
+Rename the show in the current folder, nothing else.
+.TP
+.B renamer \-\-fix\-folders \-\-years
+Rename the files and folders of the show in the current folder.
+.TP
+.B renamer meta .
+Fix only the tags inside the videos; rename nothing.
+.TP
+.B renamer meta \-\-view Season_02
+Look at the tags of one season without changing them.
+.TP
+.B renamer meta \-\-compare
+See which tags differ from TVmaze, without changing them.
+.TP
+.B renamer \-\-sort \-\-clean
+Gather loose videos into season folders and tidy up; then run
+.B renamer
+to rename them.
+.TP
+.B renamer \-\-show """Example Show""" \-\-meta
+Rename and tag, naming the show yourself.
+.TP
+.B renamer \-\-make\-names names.txt
+Write TVmaze's titles to a file to correct by hand, then
+.B renamer \-\-names names.txt
+renames from it.
+.TP
+.B renamer \-\-undo
+Reverse the last run.
+.TP
+.B renamer lib \-\-sort /mnt/media/TV
+Gather each show in a TV library into one show folder.
+.TP
+.B renamer lib \-\-group /mnt/media/TV
+Or keep the copies of each show apart, in one folder.
+.TP
+.B renamer lib \-\-genre /mnt/media/TV
+Then sort the shows into genre folders.
+.SH FILES
+.TP
+.I .rename_undo.json
+The undo log, in the show folder.
+.TP
+.IR .nfo/ ", " .nfo/.nfo\-old/
+New Kodi
+.I .nfo
+files, and the old ones moved out of the way.
+.TP
+.IR .junk/ ", " .duplicates/ ", " ../unsorted/
+Junk, worse copies of an episode, and other shows' videos, moved out of the way.
+.TP
+.I ~/.logs/renamer_<Show>_<date>_<time>.log
+The log of a
+.B \-\-verbose
+run.
+.B _undo ,
+.B _reset ,
+.B _meta ,
+.B _view ,
+.B _compare ,
+.B _sort ,
+.B _clean
+and
+.B _names
+are added for those runs.
+.TP
+.I ~/.config/renamer/genres.conf
+Which genre folder each genre goes to, their priority, and other words for each genre
+(written with defaults on the first
+.B renamer lib
+run).
+.TP
+.I ~/.cache/renamer/lib\-lookups.json
+What
+.B renamer lib
+found for each show and movie, kept 30 days.
+.TP
+.I ~/.local/share/renamer/names/
+Titles files written for the editor, one per show.
+.SH EXIT STATUS
+.B 0
+when the run finished or you answered no;
+.B 1
+when it stopped with an error, or nothing could be undone;
+.B 130
+when stopped with Ctrl\-C.
+.SH ACKNOWLEDGEMENTS
+This product uses the TMDB API but is not endorsed or certified by TMDB.
+.SH SEE ALSO
+.BR ffprobe (1),
+.BR ffmpeg (1),
+.BR mkvpropedit (1),
+.BR mkvmerge (1),
+.BR less (1)
